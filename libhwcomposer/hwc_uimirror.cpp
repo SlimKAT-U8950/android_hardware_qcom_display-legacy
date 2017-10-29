@@ -27,6 +27,29 @@
 namespace qhwc {
 
 
+// Function to get the orientation of UI on primary.
+// When external display is connected, the primary UI is
+// fixed to landscape by the phone window manager.
+// Return the landscape orientation based on w and hw of primary
+int getDeviceOrientation() {
+    int orientation = 0;
+    //Calculate the rect for primary based on whether the supplied
+    //position
+    //is within or outside bounds.
+    const int fbWidth =
+        ovutils::FrameBufferInfo::getInstance()->getWidth();
+    const int fbHeight =
+        ovutils::FrameBufferInfo::getInstance()->getHeight();
+    if(fbWidth >= fbHeight) {
+        // landscape panel
+        orientation = overlay::utils::OVERLAY_TRANSFORM_0;
+    } else {
+        // portrait panel
+        orientation = overlay::utils::OVERLAY_TRANSFORM_ROT_90;
+    }
+    return orientation;
+}
+
 //Static Members
 ovutils::eOverlayState UIMirrorOverlay::sState = ovutils::OV_CLOSED;
 bool UIMirrorOverlay::sIsUiMirroringOn = false;
@@ -87,15 +110,17 @@ bool UIMirrorOverlay::configure(hwc_context_t *ctx, hwc_layer_list_t *list)
                     info,
                     ovutils::ZORDER_0,
                     ovutils::IS_FG_OFF,
-                    ovutils::ROT_0_ENABLED);
+                    ovutils::ROT_FLAG_ENABLED);
             ovutils::PipeArgs pargs[ovutils::MAX_PIPES] = { parg, parg, parg };
             ov.setSource(pargs, dest);
 
             // x,y,w,h
             ovutils::Dim dcrop(0, 0, m->info.xres, m->info.yres);
             ov.setCrop(dcrop, dest);
+            //Get the current orientation on primary panel
+            int transform = getDeviceOrientation();
             ovutils::eTransform orient =
-                    static_cast<ovutils::eTransform>(ctx->deviceOrientation);
+                    static_cast<ovutils::eTransform>(transform);
             ov.setTransform(orient, dest);
 
             ovutils::Dim dim;
